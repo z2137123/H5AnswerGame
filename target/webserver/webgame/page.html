@@ -1,0 +1,121 @@
+<!DOCTYPE html>  
+<html>  
+    <head>  
+       <meta charset="UTF-8">  
+       <title>socket</title>  
+       <script type="text/javascript" src="http://cdn.static.runoob.com/libs/jquery/2.1.1/jquery.min.js"></script>  
+       <script src="https://cdn.bootcss.com/jquery/3.2.1/jquery.slim.min.js"  crossorigin="anonymous"></script>
+		<script src="https://cdn.bootcss.com/popper.js/1.12.9/umd/popper.min.js"  crossorigin="anonymous"></script>
+		<script src="https://cdn.bootcss.com/bootstrap/4.0.0/js/bootstrap.min.js"  crossorigin="anonymous"></script>
+       <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/4.0.0/css/bootstrap.min.css" crossorigin="anonymous">
+    </head> 
+     
+    <body>  
+		 <div class="container">
+		 
+			<div class="panel panel-default">
+			    <div class="panel-heading">
+			       wellcome
+			    </div>
+			    <div class="panel-body">
+				   <div class="row" >
+				      <div class="col-sm-6" >
+				         <p><button  type="button" class="col-sm-12 btn btn-primary btn-lg" onclick="join()">join</button></p>
+				      </div>
+				      <div class="col-sm-6" >
+				         <p><button  type="button" class="col-sm-12 btn btn-primary btn-lg" onclick="quit()">quit</button></p>
+				      </div>
+				   </div>
+			    </div>
+			</div>
+			<div id="test" class="row" style="display:none">
+			    <div class="col-sm-12" >
+			         <p><h2>问题：答案选1是对的！</h2></p>
+			    </div>
+				<div class="col-sm-12" >
+			         <p><button  type="button" class="col-sm-12 btn btn-primary btn-lg" onclick="choice(this)" value="1">答案1</button></p>
+			    </div>
+			    <div class="col-sm-12" >
+			         <p><button  type="button" class="col-sm-12   btn btn-primary btn-lg" onclick="choice(this)" value="2">答案2</button></p>
+			    </div>
+			    <div class="col-sm-12" >
+			         <p><button  type="button" class="col-sm-12   btn btn-primary btn-lg" onclick="choice(this)" value="3">答案3</button></p>
+			    </div>
+			    <div class="col-sm-12" >
+			         <p><button  type="button" class="col-sm-12  btn btn-primary btn-lg" onclick="choice(this)" value="4">答案3</button></p>
+			    </div>
+			</div>							
+		</div>			
+       <div id="message"></div>  
+    </body>  
+     
+    <script type="text/javascript">  
+       var websocket = null;  
+       //判断浏览器是否支持websocket  
+       if('WebSocket' in window) {  
+           websocket = new WebSocket("ws://123.207.218.104/webserver/ws/server.do");  
+       }else{  
+           $("#message").html("该浏览器不支持实时通信功能");  
+       }  
+        
+       websocket.onopen= function() {  
+           console.log("websocket连接成功");  
+       }  
+        
+       websocket.onclose= function() {  
+           console.log("websocket连接关闭");  
+       }  
+        
+       websocket.onmessage= function(event) {  
+           console.log("接收消息");  
+           console.log(event);  
+           var obj = JSON.parse(event.data);
+           gameView(obj.command);
+           printMsg(obj.msg);  
+       }  
+        
+       //打印消息  
+       function printMsg(msg) {  
+           $("#message").append(msg+ "<br/>");  
+       }  
+        
+       
+       function join() {  
+           var obj = {
+        		   command : 'join'
+           };
+           websocket.send(JSON.stringify(obj));   
+       } 
+       
+       function quit() {  
+           var obj = {
+        		   command : 'quit'
+           };
+           websocket.send(JSON.stringify(obj));  
+       } 
+       
+       function choice(obj) {  
+           var obj = {
+        		   command : 'play',
+        		   question : "1",
+        		   answer : obj.value
+           };
+           websocket.send(JSON.stringify(obj));  
+       } 
+        
+       function closeWebSocket(){  
+           websocket.close();  
+       }  
+       
+       function gameView(status){
+    	    var div = document.getElementById("test");
+    	    if(status=="start"){
+    	        div.style.display = "block";
+    	    } else if (status=="quit"){
+    	        div.style.display = "none";
+    	    }else{
+    	    	div.style.display = "none";
+    	    }
+    	}
+    </script>  
+</html>  
