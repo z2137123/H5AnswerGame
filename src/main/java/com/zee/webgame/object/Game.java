@@ -11,6 +11,10 @@ public class Game {
 	private List<Player> playList ;
 	
 	private List<Map<String,Object>> roundInfoList ;
+	
+	public void addRound(){
+		this.currentRound ++;
+	}
 
 	public String getGameId() {
 		return gameId;

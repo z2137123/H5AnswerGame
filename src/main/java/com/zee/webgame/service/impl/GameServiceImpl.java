@@ -29,7 +29,13 @@ public class GameServiceImpl implements GameService {
 	
 	private static String GAME_COMMAND_QUIT = "quit";
 	
-	private static String GAME_COMMAND_ACCAPT = "accapt";
+	private static String GAME_COMMAND_ACCPT = "accpt";
+	
+	private static String GAME_COMMAND_SETTLE = "settle";
+	
+	private static String GAME_COMMAND_NEXT = "next";
+	
+	private static String GAME_COMMAND_OVER = "over";
 	
 
 	private static LinkedBlockingQueue<Player> ReadyPlayers = new LinkedBlockingQueue<Player>(); 
@@ -47,59 +53,132 @@ public class GameServiceImpl implements GameService {
 			this.setRoundInfoList(new ArrayList<Map<String,Object>>());
 			this.setCurrentRound(0);
 			qustionsList.add("1");
+			qustionsList.add("7");
 		}
 		
-		public void playerMove(Player player,Object moveObj){
+		public void playerMove(Player player,JSONObject moveObj){
 			
-			if (this.getRoundInfoList().size() == 0) {
+			//判断是否已经移动
+			if (this.getRoundInfoList().size() > this.getCurrentRound()){
+				Map<String,Object> roundInfo = this.getRoundInfoList().get(this.getCurrentRound());
+				if(null != roundInfo.get(player.getPlayerId())){
+					try {
+						sendMsgToPlayer(player,"0","已经选择答案，无法修改",null);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					return;
+				}
+			}
+			
+			//记录移动信息
+			if (this.getRoundInfoList().size() == this.getCurrentRound()) {
 				Map<String,Object> roundInfo = new HashMap<String,Object>();
-				roundInfo.put(player.getPlayerId(), moveObj);
+				roundInfo.put(player.getPlayerId(), moveObj.get("answer"));
 				this.getRoundInfoList().add(roundInfo);
 			}else{
 				Map<String,Object> roundInfo = this.getRoundInfoList().get(this.getCurrentRound());
-				roundInfo.put(player.getPlayerId(), moveObj);
+				roundInfo.put(player.getPlayerId(), moveObj.get("answer"));
 			}
 			
+			//移动结果推送
+			String result = checkRoundAnswer(player)?"true":"false";
+			moveObj.put("result", result);
+			try {
+				sendMsgToPlayer(player,"0",moveObj.toJSONString()  ,GAME_COMMAND_ACCPT);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 			
 		}
 		
-		public void roundSettle(Player player){
+		public boolean roundSettle(Player player){
 
 			int movedPlayer = getMovedPlayer();
 			List<Player> playerList = getPlayList();
 			if (movedPlayer == playerList.size()) {
 				//答题玩家人数等于玩家人数说明回合结束，做回合结算
 				for (Player playerTmp:playerList){
-					StringBuffer sb = new StringBuffer();
 					Map<String,Object> currentRound = this.getRoundInfoList().get(this.getCurrentRound());
 					Set<String> roundSet = currentRound.keySet();
 					Iterator<String> it = roundSet.iterator();
 					String tempId; 
+					Map<String,String> msg = new HashMap<String,String>();
 					while (it.hasNext()){
 						tempId = it.next();
-						if (tempId.equals(player.getPlayerId())){
-							sb.append("，你的的答案：").append(currentRound.get(tempId));	
-						}else{
-							sb.append("，对手的答案：").append(currentRound.get(tempId));						
+						if (!tempId.equals(playerTmp.getPlayerId())){
+							msg.put("opponentAnswer", (String) currentRound.get(tempId));
 						}
 					}
 					
+					//正确答案
 					String currentQuestion = (String) getCurrentQuest();
-					String playerAnswer = (String) currentRound.get(playerTmp.getPlayerId());
-					String answerResult = currentQuestion.equals(playerAnswer)? "正确":"错误";
+					msg.put("rightAnswer", currentQuestion);
 					try {
-						//广播结算结果
-						sendMsgToPlayer(playerTmp,"0","答题结果：" +answerResult +  ",正确答案：" + currentQuestion + sb.toString()  ,GAME_COMMAND_ACCAPT);
+						sendMsgToPlayer(playerTmp,"0", JSON.toJSONString(msg) ,GAME_COMMAND_SETTLE);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
 				}
 				
+				return true;
 			}else{
 				//回合未结束
 				try {
-					sendMsgToPlayer(player,"0","作答成功，等待对手作答",GAME_COMMAND_ACCAPT);
+					sendMsgToPlayer(player,"0","作答成功，等待对手作答",null);
 				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				return false;
+			}
+		}
+		
+		
+		private void gameSettle(){
+			if (this.getCurrentRound() + 1 >= this.qustionsList.size()){
+				//游戏结束
+				for (Player player:this.getPlayList()){
+					try {
+						sendMsgToPlayer(player,"0", "游戏结束" ,GAME_COMMAND_OVER);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			}else{
+				//进入下回合
+				nextRound();
+			}
+		}
+		
+		private void nextRound(){
+			addRound();
+			List<Map<String,String>> answerList = new ArrayList<Map<String,String>>();
+			Map<String,String> am1 = new HashMap<String, String>();
+			am1.put("value", "5");
+			am1.put("answer", "答案一");
+			answerList.add(am1);
+			Map<String,String> am2 = new HashMap<String, String>();
+			am2.put("value", "6");
+			am2.put("answer", "答案二");
+			answerList.add(am2);
+			Map<String,String> am3 = new HashMap<String, String>();
+			am3.put("value", "7");
+			am3.put("answer", "答案三");
+			answerList.add(am3);
+			Map<String,String> am4 = new HashMap<String, String>();
+			am4.put("value", "8");
+			am4.put("answer", "答案四");
+			answerList.add(am4);
+			
+			Map<String,Object> msgMap = new HashMap<String, Object>();
+			msgMap.put("question", "问题二：答案是三");
+			msgMap.put("answerList", answerList);
+			for (Player player:this.getPlayList()){
+				try {
+					sendMsgToPlayer(player,"0", JSON.toJSONString(msgMap) ,GAME_COMMAND_NEXT);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -185,23 +264,47 @@ public class GameServiceImpl implements GameService {
 	}
 	
 	private void startGame(AnswerGame game) throws IOException{
+		
+		List<Map<String,String>> answerList = new ArrayList<Map<String,String>>();
+		Map<String,String> am1 = new HashMap<String, String>();
+		am1.put("value", "1");
+		am1.put("answer", "答案一");
+		answerList.add(am1);
+		Map<String,String> am2 = new HashMap<String, String>();
+		am2.put("value", "2");
+		am2.put("answer", "答案二");
+		answerList.add(am2);
+		Map<String,String> am3 = new HashMap<String, String>();
+		am3.put("value", "3");
+		am3.put("answer", "答案三");
+		answerList.add(am3);
+		Map<String,String> am4 = new HashMap<String, String>();
+		am4.put("value", "4");
+		am4.put("answer", "答案四");
+		answerList.add(am4);
+		
+		Map<String,Object> msgMap = new HashMap<String, Object>();
+		msgMap.put("question", "问题一：答案是一");
+		msgMap.put("answerList", answerList);
+		
+		
 		List<Player> playList =  game.getPlayList();
 		for (Player player:playList){
 			player.setStatus(Player.PLAYER_STATUS_PALYING);
 			player.setGame(game);
-			sendMsgToPlayer(player,"0","游戏开始，游戏编号" + game.getGameId(),GAME_COMMAND_START);
+			sendMsgToPlayer(player,"0",JSON.toJSONString(msgMap),GAME_COMMAND_START);
 		}
 	}
 
 	public String play(Player player, JSONObject data) {
 		
 		AnswerGame agame = (AnswerGame) player.getGame();
-		agame.playerMove(player, data.getString("answer"));
+		agame.playerMove(player, data);
 		
-		agame.roundSettle(player);
+		if(agame.roundSettle(player)){
+			agame.gameSettle();			
+		}
 		
-		//TODO 这里应该判断游戏是否结束，目前先直接结束游戏
-		this.quit(player);
 		
 		return null;
 	}
