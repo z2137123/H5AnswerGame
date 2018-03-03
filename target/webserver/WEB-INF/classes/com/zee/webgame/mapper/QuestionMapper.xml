@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zee.webgame.mapper.QuestionMapper">
+
+	<cache></cache>
+	
+	<resultMap type="Question" id="questionResultMap">
+		<result column="idquestion_info" property="questionId" javaType="String"/>
+		<result column="question_name" property="questionName" javaType="String"/>
+		<result column="first_anwser" property="fistAnswer" javaType="String"/>
+		<result column="second_answer" property="secondAnswer" javaType="String"/>
+		<result column="third_answer" property="thirdAnswer" javaType="String"/>
+		<result column="fourth_answer" property="fourthAnswer" javaType="String"/>
+		<result column="right_answer" property="rightAnswer" javaType="String"/>
+		
+	</resultMap>
+	
+	
+	<select id="getQuestionList" resultMap="questionResultMap" parameterType="java.lang.Integer">
+	<![CDATA[
+		SELECT   * ,rand() 'rn' FROM qdb.question_info  ORDER BY rn limit 5;
+	]]>
+	</select>
+	
+
+	<!--  
+	<sql id="selectSQL">
+		<![CDATA[
+			SELECT * FROM product INNER JOIN category ON product.categoryid=category.id
+		]]>
+	</sql>
+	
+	
+	<select id="listAllProductIncludeCategoryName" resultMap="productResultMap" useCache="true" >
+		<include refid="selectSQL"/>
+	</select>
+	
+	
+	<insert id="insertProduct" keyColumn="id" keyProperty="id" useGeneratedKeys="true" parameterType="Product">
+		<![CDATA[
+			INSERT INTO product (name,price,description,categoryid) values (#{name},#{price},#{description},#{categoryid})
+		]]>
+	</insert>
+	
+	
+	<update id="updateProduct" parameterType="Product">
+		<![CDATA[
+			UPDATE product SET name=#{name},price=#{price},description=#{description},categoryid=#{categoryid} WHERE id = #{id}
+		]]>
+	</update>
+	-->
+	
+	
+</mapper>

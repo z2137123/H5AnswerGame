@@ -1,33 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.zee.webgame.mapper.SMSMapper">
+<mapper namespace="com.zee.webgame.mapper.QuestionMapper">
 
 	<cache></cache>
 	
-	<resultMap type="SMS" id="productResultMap">
-		<result column="id_sms" property="id" javaType="String"/>
-		<result column="wx_open_id" property="openId" javaType="String"/>
-		<result column="send_by" property="sendBy" javaType="String"/>
-		<result column="sms_comtext" property="context" javaType="String"/>
-		<result column="send_time" property="sendTime" javaType="String"/>
+	<resultMap type="Question" id="questionResultMap">
+		<result column="idquestion_info" property="questionId" javaType="String"/>
+		<result column="question_name" property="questionName" javaType="String"/>
+		<result column="first_anwser" property="fistAnswer" javaType="String"/>
+		<result column="second_answer" property="secondAnswer" javaType="String"/>
+		<result column="third_answer" property="thirdAnswer" javaType="String"/>
+		<result column="fourth_answer" property="fourthAnswer" javaType="String"/>
+		<result column="right_answer" property="rightAnswer" javaType="String"/>
 		
 	</resultMap>
 	
 	
-	<select id="getSMSByopenId" resultMap="productResultMap" parameterType="java.util.Map">
+	<select id="getQuestionList" resultMap="questionResultMap" parameterType="java.lang.Integer">
 	<![CDATA[
-		select * from weapp_sms_record where wx_open_id=#{openId} order by created_date desc  limit #{pageNumber},#{pageSize}
+		SELECT   * ,rand() 'rn' FROM qdb.question_info  ORDER BY rn limit 5;
 	]]>
 	</select>
 	
-    <insert id="insertSMS" parameterType="com.zee.webgame.model.SMS">
-		<![CDATA[
-			INSERT INTO weapp.weapp_sms_record
-			(id_sms, wx_open_id, send_by, sms_comtext, send_time)
-			VALUES(uuid(), #{openId}, #{sendBy}, #{context}, #{sendTime});
-		]]>
-	</insert>
+
 	<!--  
 	<sql id="selectSQL">
 		<![CDATA[

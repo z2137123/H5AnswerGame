@@ -12,6 +12,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import com.zee.webgame.mapper.QuestionMapper;
+import com.zee.webgame.model.Question;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -36,24 +39,24 @@ public class GameServiceImpl implements GameService {
 	private static String GAME_COMMAND_NEXT = "next";
 	
 	private static String GAME_COMMAND_OVER = "over";
-	
+
+	@Autowired
+	private QuestionMapper questionMapper;
 
 	private static LinkedBlockingQueue<Player> ReadyPlayers = new LinkedBlockingQueue<Player>(); 
 	
 	public class AnswerGame extends Game{
 		
 		
-		private List<String> qustionsList ;
-		
+		private List<Question> qustionsList ;
+
 		
 		public AnswerGame(){
 			this.setGameId(String.valueOf(System.currentTimeMillis()));
 			this.setPlayList(new ArrayList<Player>());
-			this.qustionsList = new ArrayList<String>();
+			this.qustionsList = questionMapper.getQuestionList(0);
 			this.setRoundInfoList(new ArrayList<Map<String,Object>>());
 			this.setCurrentRound(0);
-			qustionsList.add("1");
-			qustionsList.add("7");
 		}
 		
 		public void playerMove(Player player,JSONObject moveObj){
@@ -112,7 +115,7 @@ public class GameServiceImpl implements GameService {
 					}
 					
 					//正确答案
-					String currentQuestion = (String) getCurrentQuest();
+					String currentQuestion = getCurrentQuest().getRightAnswer();
 					msg.put("rightAnswer", currentQuestion);
 					try {
 						sendMsgToPlayer(playerTmp,"0", JSON.toJSONString(msg) ,GAME_COMMAND_SETTLE);
@@ -132,6 +135,24 @@ public class GameServiceImpl implements GameService {
 				return false;
 			}
 		}
+
+		public void gameStart(){
+			Map<String,Object> msgMap = this.formatQuestionMap(this.getCurrentQuest());
+
+
+			List<Player> playList =  this.getPlayList();
+			for (Player player:playList){
+				player.setStatus(Player.PLAYER_STATUS_PALYING);
+				player.setGame(this);
+				try {
+					sendMsgToPlayer(player,"0",JSON.toJSONString(msgMap),GAME_COMMAND_START);
+				}catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+			}
+		}
 		
 		
 		private void gameSettle(){
@@ -140,6 +161,8 @@ public class GameServiceImpl implements GameService {
 				for (Player player:this.getPlayList()){
 					try {
 						sendMsgToPlayer(player,"0", "游戏结束" ,GAME_COMMAND_OVER);
+						player.setGame(null);
+						player.setStatus(Player.PLAYER_STATUS_FREE);
 					} catch (IOException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -153,35 +176,39 @@ public class GameServiceImpl implements GameService {
 		
 		private void nextRound(){
 			addRound();
-			List<Map<String,String>> answerList = new ArrayList<Map<String,String>>();
-			Map<String,String> am1 = new HashMap<String, String>();
-			am1.put("value", "5");
-			am1.put("answer", "答案一");
-			answerList.add(am1);
-			Map<String,String> am2 = new HashMap<String, String>();
-			am2.put("value", "6");
-			am2.put("answer", "答案二");
-			answerList.add(am2);
-			Map<String,String> am3 = new HashMap<String, String>();
-			am3.put("value", "7");
-			am3.put("answer", "答案三");
-			answerList.add(am3);
-			Map<String,String> am4 = new HashMap<String, String>();
-			am4.put("value", "8");
-			am4.put("answer", "答案四");
-			answerList.add(am4);
-			
-			Map<String,Object> msgMap = new HashMap<String, Object>();
-			msgMap.put("question", "问题二：答案是三");
-			msgMap.put("answerList", answerList);
 			for (Player player:this.getPlayList()){
 				try {
-					sendMsgToPlayer(player,"0", JSON.toJSONString(msgMap) ,GAME_COMMAND_NEXT);
+					sendMsgToPlayer(player,"0", JSON.toJSONString(formatQuestionMap(this.getCurrentQuest())) ,GAME_COMMAND_NEXT);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
+		}
+
+		private Map<String,Object> formatQuestionMap(Question question){
+			List<Map<String,String>> answerList = new ArrayList<Map<String,String>>();
+			Map<String,String> am1 = new HashMap<String, String>();
+			am1.put("value", "1");
+			am1.put("answer", question.getFistAnswer());
+			answerList.add(am1);
+			Map<String,String> am2 = new HashMap<String, String>();
+			am2.put("value", "2");
+			am2.put("answer", question.getSecondAnswer());
+			answerList.add(am2);
+			Map<String,String> am3 = new HashMap<String, String>();
+			am3.put("value", "3");
+			am3.put("answer", question.getThirdAnswer());
+			answerList.add(am3);
+			Map<String,String> am4 = new HashMap<String, String>();
+			am4.put("value", "4");
+			am4.put("answer", question.getFourthAnswer());
+			answerList.add(am4);
+
+			Map<String,Object> resultMap = new HashMap<String, Object>();
+			resultMap.put("question", question.getQuestionName());
+			resultMap.put("answerList", answerList);
+			return resultMap;
 		}
 		
 		private int getMovedPlayer(){
@@ -196,14 +223,13 @@ public class GameServiceImpl implements GameService {
 		private boolean checkRoundAnswer(Player player){
 			Map<String,Object> roundInfo = this.getRoundInfoList().get(this.getCurrentRound());
 			String moveInfo = (String) roundInfo.get(player.getPlayerId());
-			String rightAnswer =  qustionsList.get(this.getCurrentRound());
-			return rightAnswer.equals(moveInfo);
+			Question currentQuestion =  qustionsList.get(this.getCurrentRound());
+			return moveInfo.equals(currentQuestion.getRightAnswer());
 		}
 		
 		
-		public Object getCurrentQuest(){
-			Object currentQuest = this.qustionsList.get(this.getCurrentRound());
-			return currentQuest;
+		public Question getCurrentQuest(){
+			return 	this.qustionsList.get(this.getCurrentRound());
 		}
 		
 		public int addPlayer(Player player){
@@ -264,36 +290,7 @@ public class GameServiceImpl implements GameService {
 	}
 	
 	private void startGame(AnswerGame game) throws IOException{
-		
-		List<Map<String,String>> answerList = new ArrayList<Map<String,String>>();
-		Map<String,String> am1 = new HashMap<String, String>();
-		am1.put("value", "1");
-		am1.put("answer", "答案一");
-		answerList.add(am1);
-		Map<String,String> am2 = new HashMap<String, String>();
-		am2.put("value", "2");
-		am2.put("answer", "答案二");
-		answerList.add(am2);
-		Map<String,String> am3 = new HashMap<String, String>();
-		am3.put("value", "3");
-		am3.put("answer", "答案三");
-		answerList.add(am3);
-		Map<String,String> am4 = new HashMap<String, String>();
-		am4.put("value", "4");
-		am4.put("answer", "答案四");
-		answerList.add(am4);
-		
-		Map<String,Object> msgMap = new HashMap<String, Object>();
-		msgMap.put("question", "问题一：答案是一");
-		msgMap.put("answerList", answerList);
-		
-		
-		List<Player> playList =  game.getPlayList();
-		for (Player player:playList){
-			player.setStatus(Player.PLAYER_STATUS_PALYING);
-			player.setGame(game);
-			sendMsgToPlayer(player,"0",JSON.toJSONString(msgMap),GAME_COMMAND_START);
-		}
+		game.gameStart();
 	}
 
 	public String play(Player player, JSONObject data) {

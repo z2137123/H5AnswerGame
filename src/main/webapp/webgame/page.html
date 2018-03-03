@@ -4,36 +4,48 @@
 <meta charset="utf-8">
 	<script src="http://cdn.static.runoob.com/libs/angular.js/1.4.6/angular.min.js"></script>
     <script type="text/javascript" src="http://cdn.static.runoob.com/libs/jquery/2.1.1/jquery.min.js"></script>  
-    <script src="https://cdn.bootcss.com/jquery/3.2.1/jquery.slim.min.js"  crossorigin="anonymous"></script>
-	<script src="https://cdn.bootcss.com/popper.js/1.12.9/umd/popper.min.js"  crossorigin="anonymous"></script>
-	<script src="https://cdn.bootcss.com/bootstrap/4.0.0/js/bootstrap.min.js"  crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/4.0.0/css/bootstrap.min.css" crossorigin="anonymous">
+    <script src="https://cdn.bootcss.com/jquery/3.2.1/jquery.slim.min.js"  ></script>
+	<script src="https://cdn.bootcss.com/popper.js/1.12.9/umd/popper.min.js" ></script>
+	<script src="https://cdn.bootcss.com/bootstrap/4.0.0/js/bootstrap.min.js" ></script>
+    <link rel="stylesheet" href="../css/bootstrap.min.css" crossorigin="anonymous">
 </head>
 <div ng-app="myApp" ng-controller="myCtrl">
 	<div class="container">
-		<div class="panel panel-default" id="wellcome">
-			<div class="panel-heading">
-
+		<div class="col-sm-12" id="wellcome">
+			<div class="row" style="text-align: center">
+				<p><h2>答题</h2></p>
 			</div>
-			<div class="panel-body">
-			   <div class="row" >
-				  <div class="col-sm-6" >
-					 <p><button  type="button" class="col-sm-12 btn btn-primary btn-lg" ng-click="join()">join</button></p>
-				  </div>
-				  <div class="col-sm-6" >
-					 <p><button  type="button" class="col-sm-12 btn btn-primary btn-lg" ng-click="quit()">quit</button></p>
-				  </div>
-			   </div>
+			<div  class="row col-sm-12" >
+				<button type="button" class="btn btn-primary btn-lg col-sm-4" ng-click="join()">
+					<span class="glyphicon glyphicon-log-in"></span> 加入
+				</button>
+				<button type="button" class="btn btn-primary btn-lg col-sm-4 col-sm-offset-4" ng-click="quit()">
+					<span class="glyphicon glyphicon-log-out"></span> 退出
+				</button>
 			</div>
 		</div>
-		<div id="game" class="row" >
-			    <div class="col-sm-12" >
-			         <p><h2>{{question}}</h2></p>
+	</div>
+	<div id="game" class="container" style="margin-top: 20px;{{game}}" >
+		<div  class="row col-sm-12" >
+			<button type="button" class="btn btn-primary btn-lg col-sm-4">
+				<span class="glyphicon glyphicon-user"></span>{{playerName}}
+			</button>
+			<button type="button" class="btn btn-primary btn-lg col-sm-4 col-sm-offset-4">
+				<span class="glyphicon glyphicon-user"></span> {{oppName}}
+			</button>
+		</div>
+		<div  class="row" >
+			    <div class="col-sm-12" style="text-align: center">
+					<p><h2>{{question}}</h2></p>
 			    </div>
 				<div class="col-sm-12" ng-repeat="x in answerList">
-					<div style="margin-top:20px;"><button id="{{x.value}}" type="button" class="col-sm-12 btn {{a.clazz}}" ng-model="a.value" ng-click="choice($index)">{{x.answer}}</button></div>
+					<div style="margin-top: 10px">
+						<span id="{{x.value + 'L'}}" style="line-height:35px;text-align: center"class='col-sm-1 col-sm-offset-2'></span>
+						<button id="{{x.value}}"  type="button" class="col-sm-6 btn btn-default {{a.clazz}}" ng-model="a.value" ng-click="choice($index)">{{x.answer}}</button>
+						<span id="{{x.value + 'R'}}" style="line-height:35px;text-align: center"  class='col-sm-1'></span>
+					</div>
 				</div>
-				
+
 		</div>
 	</div>
 	<div id="message"></div> 
@@ -44,8 +56,9 @@ var app = angular.module('myApp', []);
 app.controller('myCtrl', function($scope, $timeout) {
 
 	
-	$scope.game="display:none"
-	
+	$scope.game="display:none";
+	$scope.playerName = '玩家1';
+	$scope.oppName = '玩家2';
 
 	
 	
@@ -62,8 +75,9 @@ app.controller('myCtrl', function($scope, $timeout) {
 	
 	   var websocket = null;  
        //判断浏览器是否支持websocket  
-       if('WebSocket' in window) {  
-           websocket = new WebSocket("ws://123.207.218.104/webserver/ws/server.do");  
+       if('WebSocket' in window) {
+//		   websocket = new WebSocket("ws://123.207.218.104/webserver/ws/server.do");
+		   websocket = new WebSocket("ws://localhost:8080/webserver/ws/server.do");
        }else{  
            $("#message").html("该浏览器不支持实时通信功能");  
        }  
@@ -90,6 +104,7 @@ app.controller('myCtrl', function($scope, $timeout) {
 						}else{
 							$(buttonId).addClass("btn-danger");
 						}
+						$(buttonId + 'L').addClass("glyphicon glyphicon-chevron-right");
 					}
 				}
            }else if ('start' == obj.command){
@@ -106,6 +121,7 @@ app.controller('myCtrl', function($scope, $timeout) {
 						if ($scope.answerList[i].value == msg.rightAnswer){
 							var buttonId = "#" + $scope.answerList[i].value;
 							$(buttonId).addClass("btn-success");
+							$(buttonId + 'R').addClass("glyphicon glyphicon-chevron-left");
 						}
 					}
 				}else {
@@ -118,17 +134,20 @@ app.controller('myCtrl', function($scope, $timeout) {
 						if ($scope.answerList[i].value == msg.opponentAnswer){
 							var buttonId = "#" + $scope.answerList[i].value;
 							$(buttonId).addClass("btn-danger");
+							$(buttonId + 'R').addClass("glyphicon glyphicon-chevron-left");
 						}
 					}
 				
 				}			
 		   }else if ('over' == obj.command){
-				$scope.quit();
 				printMsg(obj.msg); 
 		   }else if ('next' == obj.command){
 				var msg = JSON.parse(obj.msg)
 				printMsg("本轮结束，两秒后开始下一题"); 
 				$timeout(delayN(msg.answerList,msg.question), 3000);
+		   }else if ('quit' == obj.command){
+			   $scope.quit();
+			   printMsg(obj.msg);
 		   }else{
 				printMsg(obj.msg);
 		   }
@@ -159,13 +178,16 @@ app.controller('myCtrl', function($scope, $timeout) {
            var obj = {
         		   command : 'quit'
            };
-           websocket.send(JSON.stringify(obj));  
+           websocket.send(JSON.stringify(obj));
+		   $scope.answerList = null;
+		   $scope.game="display:none";
+		   $timeout(angular.noop);
        } 
         
         
        function closeWebSocket(){  
            websocket.close();  
        }  
-});
+})
 </script>
 </html>
